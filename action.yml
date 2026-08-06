@@ -1,0 +1,54 @@
+name: AI Code Review
+description: >-
+  LLM-powered pull request review: bugs, security (DevSecOps), performance.
+  Posts inline comments + summary, gates on severity, emits SARIF.
+  Defaults to GitHub Models (free with GITHUB_TOKEN) — no extra keys needed.
+author: julio-arcila
+branding:
+  icon: shield
+  color: green
+inputs:
+  github-token:
+    description: Token with pull-requests:write (and models:read for GitHub Models)
+    required: true
+    default: ${{ github.token }}
+  model:
+    description: Model id (GitHub Models catalog, or any OpenAI-compatible model)
+    required: false
+    default: openai/gpt-4o-mini
+  base-url:
+    description: OpenAI-compatible endpoint (GitHub Models by default; OpenRouter/opencode serve/etc.)
+    required: false
+    default: https://models.github.ai/inference
+  api-key:
+    description: API key for base-url (defaults to github-token for GitHub Models)
+    required: false
+    default: ""
+  max-files:
+    description: Max files to review (cost cap)
+    required: false
+    default: "20"
+  max-diff-lines:
+    description: Max total diff lines to send (cost cap)
+    required: false
+    default: "4000"
+  fail-on:
+    description: 'Fail the check if findings of this severity exist: none|low|medium|high|critical'
+    required: false
+    default: high
+  sarif-path:
+    description: If set, write SARIF results here (upload with codeql-action/upload-sarif)
+    required: false
+    default: ""
+  ignore:
+    description: Comma-separated glob patterns to skip
+    required: false
+    default: "*.lock,package-lock.json,*.min.js,dist/*,*.map,*.snap"
+outputs:
+  findings:
+    description: Number of findings
+  max-severity:
+    description: Highest severity found (none|low|medium|high|critical)
+runs:
+  using: node20
+  main: dist/index.js
