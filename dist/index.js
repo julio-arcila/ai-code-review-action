@@ -45726,7 +45726,10 @@ async function reviewBatch(client, model, systemPrompt, userPrompt, retries = 3)
                 temperature: 0.1,
                 max_tokens: 4000,
             });
-            return res.choices[0]?.message?.content ?? "[]";
+            const content = res.choices[0]?.message?.content ?? "";
+            if (!content.trim())
+                throw new Error("empty model response"); // retry, never silent
+            return content;
         }
         catch (err) {
             lastErr = err;
@@ -45772,7 +45775,7 @@ function bodyFor(f) {
     body += `\n\n<sub>🤖 AI review — verify before applying</sub>`;
     return body;
 }
-async function postReview(octokit, prNumber, headSha, findings, files, skipped, model) {
+async function postReview(octokit, prNumber, headSha, findings, files, skipped, model, unreliable = false) {
     const { owner, repo } = github.context.repo;
     const byFile = new Map(files.map((f) => [f.filename, f]));
     const comments = findings
@@ -45794,10 +45797,15 @@ async function postReview(octokit, prNumber, headSha, findings, files, skipped, 
     })
         .filter(Boolean)
         .join(" · ");
+    const verdict = findings.length
+        ? `**Findings:** ${counts}`
+        : unreliable
+            ? "**Inconclusive** ⚠️ — the model returned no parseable output for at least one batch. Re-run or pick another `model`."
+            : "**No issues found.** ✅";
     const summary = [
         `## 🤖 AI Code Review (\`${model}\`)`,
         "",
-        findings.length ? `**Findings:** ${counts}` : "**No issues found.** ✅",
+        verdict,
         "",
         `Reviewed ${byFile.size} file(s)` +
             (skipped.length ? `, skipped ${skipped.length} (caps/ignored/binary)` : "") +
@@ -45876,7 +45884,7 @@ function toSarif(findings, toolVersion = "1.0.0") {
 const BATCH_SIZE = 5; // files per LLM call
 async function run() {
     const token = core.getInput("github-token", { required: true });
-    const model = core.getInput("model") || "openrouter/free";
+    const model = core.getInput("model") || "nvidia/nemotron-3-super-120b-a12b:free";
     const baseUrl = core.getInput("base-url") || "https://openrouter.ai/api/v1";
     const apiKey = core.getInput("api-key") || token; // GitHub Models: GITHUB_TOKEN works
     const maxFiles = parseInt(core.getInput("max-files") || "20", 10);
@@ -45897,15 +45905,25 @@ async function run() {
     }
     const client = makeClient({ baseUrl, apiKey, model });
     const findings = [];
+    let unreliable = false;
     for (let i = 0; i < reviewable.length; i += BATCH_SIZE) {
         const batch = reviewable.slice(i, i + BATCH_SIZE);
         core.info(`Batch ${i / BATCH_SIZE + 1}: ${batch.map((b) => b.filename).join(", ")}`);
-        const raw = await reviewBatch(client, model, SYSTEM_PROMPT, buildBatchPrompt(batch));
-        const parsed = parseFindings(raw);
-        core.info(`  -> ${parsed.length} findings`);
-        findings.push(...parsed);
+        try {
+            const raw = await reviewBatch(client, model, SYSTEM_PROMPT, buildBatchPrompt(batch));
+            core.info(`  raw response (${raw.length} chars): ${raw.slice(0, 120).replace(/\n/g, " ")}`);
+            const parsed = parseFindings(raw);
+            if (parsed.length === 0 && !raw.includes("[]"))
+                unreliable = true; // unparseable ≠ clean
+            core.info(`  -> ${parsed.length} findings`);
+            findings.push(...parsed);
+        }
+        catch (err) {
+            unreliable = true;
+            core.warning(`batch failed: ${err instanceof Error ? err.message : err}`);
+        }
     }
-    const { inline, total } = await postReview(octokit, pr.number, pr.head.sha, findings, reviewable, skipped, model);
+    const { inline, total } = await postReview(octokit, pr.number, pr.head.sha, findings, reviewable, skipped, model, unreliable);
     core.info(`Posted review: ${total} findings (${inline} inline)`);
     if (sarifPath) {
         (0,external_node_fs_namespaceObject.writeFileSync)(sarifPath, JSON.stringify(toSarif(findings), null, 2));

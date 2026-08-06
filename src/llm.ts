@@ -30,7 +30,9 @@ export async function reviewBatch(
         temperature: 0.1,
         max_tokens: 4000,
       });
-      return res.choices[0]?.message?.content ?? "[]";
+      const content = res.choices[0]?.message?.content ?? "";
+      if (!content.trim()) throw new Error("empty model response"); // retry, never silent
+      return content;
     } catch (err: any) {
       lastErr = err;
       const status = err?.status ?? 0;

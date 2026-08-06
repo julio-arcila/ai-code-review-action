@@ -39,7 +39,8 @@ export async function postReview(
   findings: Finding[],
   files: FilePatch[],
   skipped: string[],
-  model: string
+  model: string,
+  unreliable = false
 ) {
   const { owner, repo } = github.context.repo;
   const byFile = new Map(files.map((f) => [f.filename, f]));
@@ -63,10 +64,16 @@ export async function postReview(
     .filter(Boolean)
     .join(" · ");
 
+  const verdict = findings.length
+    ? `**Findings:** ${counts}`
+    : unreliable
+      ? "**Inconclusive** ⚠️ — the model returned no parseable output for at least one batch. Re-run or pick another `model`."
+      : "**No issues found.** ✅";
+
   const summary = [
     `## 🤖 AI Code Review (\`${model}\`)`,
     "",
-    findings.length ? `**Findings:** ${counts}` : "**No issues found.** ✅",
+    verdict,
     "",
     `Reviewed ${byFile.size} file(s)` +
       (skipped.length ? `, skipped ${skipped.length} (caps/ignored/binary)` : "") +

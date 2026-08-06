@@ -2,7 +2,7 @@
 
 LLM-powered pull request review with a **security-first (DevSecOps) mindset**: bugs, injection, auth flaws, secret leaks, perf regressions — posted as **inline PR comments + summary**, with a **severity gate** to block merges and optional **SARIF** output for GitHub Code Scanning.
 
-**Free by default**: uses [OpenRouter](https://openrouter.ai) free models (`openrouter/free` auto-router) — one free API key, no card, generous limits. Any OpenAI-compatible endpoint works (OpenAI, a self-hosted `opencode serve`, …).
+**Free by default**: uses [OpenRouter](https://openrouter.ai) free models (`nvidia/nemotron-3-super-120b-a12b:free` — 120B, 1M ctx) — one free API key, no card, generous limits. Any OpenAI-compatible endpoint works (OpenAI, a self-hosted `opencode serve`, …).
 
 > Note: GitHub Models (`https://models.github.ai/inference` + `GITHUB_TOKEN`) was the original zero-key default, but GitHub is retiring the service in 2026 (410 brownouts). It remains configurable while it lives.
 
@@ -40,7 +40,7 @@ jobs:
 | Input | Default | Description |
 |---|---|---|
 | `github-token` | `github.token` | Needs `pull-requests: write` |
-| `model` | `openrouter/free` | Any model on the endpoint (free auto-router by default) |
+| `model` | `nvidia/nemotron-3-super-120b-a12b:free` | Any model on the endpoint (free 120B model by default) |
 | `base-url` | `https://openrouter.ai/api/v1` | OpenAI-compatible endpoint |
 | `api-key` | *(empty)* | Key for the endpoint (OpenRouter free key by default) |
 | `max-files` | `20` | Cost cap: max files reviewed |
