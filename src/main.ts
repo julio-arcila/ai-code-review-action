@@ -19,7 +19,7 @@ const BATCH_SIZE = 5; // files per LLM call
 
 async function run() {
   const token = core.getInput("github-token", { required: true });
-  const model = core.getInput("model") || "openrouter/free";
+  const model = core.getInput("model") || "nvidia/nemotron-3-super-120b-a12b:free";
   const baseUrl = core.getInput("base-url") || "https://openrouter.ai/api/v1";
   const apiKey = core.getInput("api-key") || token; // GitHub Models: GITHUB_TOKEN works
   const maxFiles = parseInt(core.getInput("max-files") || "20", 10);
@@ -44,14 +44,22 @@ async function run() {
 
   const client = makeClient({ baseUrl, apiKey, model });
   const findings: Finding[] = [];
+  let unreliable = false;
 
   for (let i = 0; i < reviewable.length; i += BATCH_SIZE) {
     const batch = reviewable.slice(i, i + BATCH_SIZE);
     core.info(`Batch ${i / BATCH_SIZE + 1}: ${batch.map((b) => b.filename).join(", ")}`);
-    const raw = await reviewBatch(client, model, SYSTEM_PROMPT, buildBatchPrompt(batch));
-    const parsed = parseFindings(raw);
-    core.info(`  -> ${parsed.length} findings`);
-    findings.push(...parsed);
+    try {
+      const raw = await reviewBatch(client, model, SYSTEM_PROMPT, buildBatchPrompt(batch));
+      core.info(`  raw response (${raw.length} chars): ${raw.slice(0, 120).replace(/\n/g, " ")}`);
+      const parsed = parseFindings(raw);
+      if (parsed.length === 0 && !raw.includes("[]")) unreliable = true; // unparseable ≠ clean
+      core.info(`  -> ${parsed.length} findings`);
+      findings.push(...parsed);
+    } catch (err) {
+      unreliable = true;
+      core.warning(`batch failed: ${err instanceof Error ? err.message : err}`);
+    }
   }
 
   const { inline, total } = await postReview(
@@ -61,7 +69,8 @@ async function run() {
     findings,
     reviewable,
     skipped,
-    model
+    model,
+    unreliable
   );
   core.info(`Posted review: ${total} findings (${inline} inline)`);
 

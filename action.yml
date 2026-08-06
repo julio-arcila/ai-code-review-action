@@ -13,9 +13,9 @@ inputs:
     required: true
     default: ${{ github.token }}
   model:
-    description: Model id (OpenRouter free auto-router by default; any OpenAI-compatible model)
+    description: Model id (OpenRouter free 120B model by default; any OpenAI-compatible model)
     required: false
-    default: openrouter/free
+    default: nvidia/nemotron-3-super-120b-a12b:free
   base-url:
     description: OpenAI-compatible endpoint (OpenRouter by default — free models, no card)
     required: false
