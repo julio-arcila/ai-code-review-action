@@ -13,15 +13,15 @@ inputs:
     required: true
     default: ${{ github.token }}
   model:
-    description: Model id (GitHub Models catalog, or any OpenAI-compatible model)
+    description: Model id (OpenRouter free auto-router by default; any OpenAI-compatible model)
     required: false
-    default: openai/gpt-4o-mini
+    default: openrouter/free
   base-url:
-    description: OpenAI-compatible endpoint (GitHub Models by default; OpenRouter/opencode serve/etc.)
+    description: OpenAI-compatible endpoint (OpenRouter by default — free models, no card)
     required: false
-    default: https://models.github.ai/inference
+    default: https://openrouter.ai/api/v1
   api-key:
-    description: API key for base-url (defaults to github-token for GitHub Models)
+    description: API key for base-url (e.g. OPENROUTER_KEY secret). Falls back to github-token (works only for GitHub Models while it lasts)
     required: false
     default: ""
   max-files:

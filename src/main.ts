@@ -19,8 +19,8 @@ const BATCH_SIZE = 5; // files per LLM call
 
 async function run() {
   const token = core.getInput("github-token", { required: true });
-  const model = core.getInput("model") || "openai/gpt-4o-mini";
-  const baseUrl = core.getInput("base-url") || "https://models.github.ai/inference";
+  const model = core.getInput("model") || "openrouter/free";
+  const baseUrl = core.getInput("base-url") || "https://openrouter.ai/api/v1";
   const apiKey = core.getInput("api-key") || token; // GitHub Models: GITHUB_TOKEN works
   const maxFiles = parseInt(core.getInput("max-files") || "20", 10);
   const maxDiffLines = parseInt(core.getInput("max-diff-lines") || "4000", 10);
