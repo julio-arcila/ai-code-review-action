@@ -7,7 +7,6 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  models: read        # GitHub Models access
   security-events: write  # SARIF upload
 
 jobs:
@@ -19,7 +18,7 @@ jobs:
         id: review
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          model: openai/gpt-4o-mini
+          api-key: ${{ secrets.OPENROUTER_KEY }}
           fail-on: high
           sarif-path: results.sarif
       - uses: github/codeql-action/upload-sarif@v3
